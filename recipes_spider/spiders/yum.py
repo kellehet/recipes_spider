@@ -2,10 +2,11 @@
 import scrapy
 from scrapy import Spider
 from selenium import webdriver
+from selenium.webdriver import ActionChains
 from scrapy.selector import Selector
 from scrapy.http import Request
 from time import sleep
-
+import pyautogui
 
 class YumSpider(scrapy.Spider):
     name = 'yum'
@@ -17,11 +18,22 @@ class YumSpider(scrapy.Spider):
         start_page = 'https://www.yummly.com'
         self.driver = webdriver.Chrome('/Users/megboudreau/Desktop/chromedriver')
         self.driver.get(url)
+        sleep(5)
+
+        for i in range(1,3):
+            pyautogui.scroll(-200)
+            sleep(2)
 
         sel = Selector(text=self.driver.page_source)
-        page = sel.xpath('//*[@class="recipe-card single-recipe visible"]/a/@href').extract()
-        for link in page:
+        visibleRecipes = sel.xpath('//*[@class="recipe-card single-recipe visible"]/a/@href').extract()
+        for link in visibleRecipes:
             next_page = start_page + link
+            yield scrapy.Request(next_page, callback=self.parse_recipe, dont_filter=True)
+
+        infiniteScrollRecipes = sel.xpath('//*[@class="recipe-card single-recipe"]/a/@href').extract()
+
+        for infinteLink in infiniteScrollRecipes:
+            next_page = start_page + infinteLink
             yield scrapy.Request(next_page, callback=self.parse_recipe, dont_filter=True)
 
     def parse_recipe(self, response):
